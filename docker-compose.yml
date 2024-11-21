@@ -1,0 +1,44 @@
+version: "3.5"
+
+services:
+  postgres:
+    image: postgres:16.0
+    container_name: library-db
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=library_api
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    networks:
+      - network1
+  flyway:
+    image: flyway/flyway:10.9.1
+    container_name: library-flyway
+    volumes:
+      - ./src/main/resources/db/migration:/flyway/sql
+    depends_on:
+      - postgres
+    command: -user=postgres -password=password -url=jdbc:postgresql://library-db:5432/library_api migrate
+    networks:
+      - network1
+  library-api:
+    image: library-api:latest
+    build:
+      context: .
+    container_name: library-api
+    env_file:
+      - .env.local
+    ports:
+      - 8080:8080
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    networks:
+      - network1
+networks:
+  network1:
+    name: library_network
+    driver: bridge
