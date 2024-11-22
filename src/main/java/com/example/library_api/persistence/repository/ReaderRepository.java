@@ -16,17 +16,15 @@ public class ReaderRepository {
 
     public ReadersEntity getTop() {
         Session session = sessionFactory.getCurrentSession();
-        return session.createQuery("from ReadersEntity reader" +
-                        " where reader.id = (select prog.readerId from BooksReadersProgressEntity prog" +
-                        " where prog.type = 'TAKE'" +
-                        " group by prog.readerId" +
-                        " having count(prog.readerId) >= (" +
-                        " select max(progress.count) from (" +
-                        " select count(pr2.readerId) as count from BooksReadersProgressEntity pr2" +
-                        " where pr2.type = 'TAKE'" +
-                        " group by pr2.readerId" +
-                        " ) as progress" +
-                        "))", ReadersEntity.class)
+        return session.createQuery("select reader from (" +
+                        "select ( " +
+                        "select count(progress) from BooksReadersProgressEntity progress " +
+                        "where progress.readerId = subReader.id " +
+                        "and progress.type = 'TAKE' " +
+                        ") as count, subReader.id as readerId from ReadersEntity subReader ) as readerCount " +
+                        "left join ReadersEntity reader on reader.id = readerCount.readerId " +
+                        "order by readerCount.count desc", ReadersEntity.class)
+                .setMaxResults(1)
                 .getSingleResultOrNull();
     }
 
